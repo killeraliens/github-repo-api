@@ -1,42 +1,26 @@
 'use strict';
 
-const apiKey = config.API_NEWS;
+function getRepos(query) {
 
-const searchURL = 'https://newsapi.org/v2/everything';
-
-
-function formatQueryParams(params) {
-    const queryItems = Object.keys(params)
-        .map(key => `${key}=${params[key]}`)
-    return queryItems.join('&');
-}
-
-function getNews(query, maxResults=10) {
-    const params = {
-        q: query,
-        language: "en",
-    };
-    const queryString = formatQueryParams(params)
-    const url = searchURL + '?' + queryString;
+    const url = `https://api.github.com/users/${query}/repos`;
 
     console.log(url);
 
-    const options = {
-        headers: new Headers({
-            "X-Api-Key": apiKey})
-    };
-
-    fetch(url, options)
+    fetch(url)
         .then(response => {
             if (response.ok) {
                 return response.json()
             }
             throw new Error(response.statusText);
         })
-        .then(responseJson => displayResults(responseJson, maxResults))
+        .then(responseJson => {
+            $('#results').find('h2').text(`Search Results For User ${query}`)
+            displayResults(responseJson);
+        })
         .catch(err => {
             console.log("whyyyyy");
             $('#js-error-message').text(`Something went wrong: ${err.message}`);
+            $('#results').find('h2').text(`Search Results`)
         });
 }
 
@@ -44,24 +28,24 @@ function watchForm() {
     $('form').submit(event => {
         event.preventDefault();
         const searchTerm = $('#js-search-term').val();
-        const maxResults = $('#js-max-results').val();
-        getNews(searchTerm, maxResults);
+        $('#results-list').empty();
+        $('#js-search-term').val('');
+        $('#js-error-message').text('');
+        getRepos(searchTerm);
     });
 }
 
-function displayResults(responseJson, maxResults) {
+function displayResults(responseJson) {
     console.log(responseJson);
-    $('#results-list').empty();
-    for (let i=0; i < responseJson.articles.length & i < maxResults; i++) {
+    responseJson.map( item => {
         $('#results-list').append(
-          `<li><h3><a href="${responseJson.articles[i].url}">${responseJson.articles[i].title}</a></h3>
-              <p>${responseJson.articles[i].source.name}</p>
-              <p>By ${responseJson.articles[i].author}</p>
-              <p>${responseJson.articles[i].description}</p>
-              <img src='${responseJson.articles[i].urlToImage}'>
-          </li>`
-        )
-    }
+            `<li>
+                <h3>${item.full_name}</h3>
+                <p><a href="${item.html_url}" target="_blank">view repo on github</a></p>
+            </li>`
+        );
+    })
+
     $('#results').removeClass('hidden');
 }
 
